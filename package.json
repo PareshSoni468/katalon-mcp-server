@@ -1,0 +1,42 @@
+{
+  "name": "katalon-mcp-server",
+  "version": "1.0.0",
+  "description": "Model Context Protocol server for Katalon Studio integration with Claude AI",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "tsc && node dist/index.js",
+    "watch": "tsc --watch",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "katalon",
+    "mcp",
+    "model-context-protocol",
+    "qa-automation",
+    "test-automation",
+    "claude-ai"
+  ],
+  "author": "QA Automation Engineer",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.2"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.17.4",
+    "@types/fs-extra": "^11.0.4",
+    "@types/node": "^24.3.0",
+    "@types/xml2js": "^0.4.14",
+    "child_process": "^1.0.2",
+    "fs-extra": "^11.3.1",
+    "glob": "^11.0.3",
+    "path": "^0.12.7",
+    "shelljs": "^0.10.0",
+    "xml2js": "^0.6.2",
+    "zod": "^3.25.76"
+  }
+}
