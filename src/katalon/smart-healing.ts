@@ -1,52 +1,83 @@
-import * as fs from 'fs-extra';
-import * as path from 'path';
-import * as xml2js from 'xml2js';
+// Import necessary libraries for file operations and XML processing
+import * as fs from 'fs-extra';      // Enhanced file system operations
+import * as path from 'path';        // File path manipulation
+import * as xml2js from 'xml2js';    // Convert XML to/from JavaScript objects
 
+/**
+ * ⚙️ Smart Healing Configuration Interface
+ * Settings that control how the intelligent healing system behaves
+ * Like the control panel for your automated test repair system
+ */
 export interface SmartHealingConfig {
-    enabled: boolean;
-    confidenceThreshold: number;
-    maxHealingAttempts: number;
-    reportFailures: boolean;
-    autoUpdateObjects: boolean;
-    healingStrategies: HealingStrategy[];
-}
-
-export interface HealingStrategy {
-    name: string;
-    priority: number;
-    enabled: boolean;
-    description: string;
-    implementation: string;
-}
-
-export interface HealingAttempt {
-    objectName: string;
-    originalSelector: string;
-    healedSelector: string;
-    strategy: string;
-    confidence: number;
-    timestamp: Date;
-    success: boolean;
-    errorMessage?: string;
-}
-
-export interface HealingReport {
-    totalAttempts: number;
-    successfulHealing: number;
-    failedHealing: number;
-    averageConfidence: number;
-    topStrategies: string[];
-    recentAttempts: HealingAttempt[];
-    recommendations: string[];
+    enabled: boolean;                 // Is smart healing turned on for this project?
+    confidenceThreshold: number;      // Minimum confidence level to accept a healing (0-1)
+    maxHealingAttempts: number;       // How many times to try healing before giving up
+    reportFailures: boolean;          // Should healing failures be reported/logged?
+    autoUpdateObjects: boolean;       // Should successful healings automatically update object repository?
+    healingStrategies: HealingStrategy[]; // List of available healing methods
 }
 
 /**
- * Katalon Smart Healing System
- * Implements intelligent object healing with multiple strategies
+ * 🔧 Healing Strategy Interface
+ * Defines a specific method for finding alternative ways to locate elements
+ * Like having different tools in a repair kit, each with its own specialty
+ */
+export interface HealingStrategy {
+    name: string;                     // Name of this healing strategy (e.g., "AI-powered", "Fallback selectors")
+    priority: number;                 // Order to try this strategy (1 = highest priority)
+    enabled: boolean;                 // Is this strategy currently active?
+    description: string;              // What this strategy does in plain English
+    implementation: string;           // Technical details about how it works
+}
+
+/**
+ * 🩹 Healing Attempt Interface
+ * Record of a single attempt to repair a broken test element
+ * Like a medical record for each "treatment" applied to your tests
+ */
+export interface HealingAttempt {
+    objectName: string;               // Name of the UI element that needed healing
+    originalSelector: string;         // The selector that stopped working
+    healedSelector: string;           // The new selector that was found to work
+    strategy: string;                 // Which healing method was used
+    confidence: number;               // How confident the system is in this healing (0-1)
+    timestamp: Date;                  // When this healing attempt occurred
+    success: boolean;                 // Did the healing work successfully?
+    errorMessage?: string;            // Error details if healing failed
+}
+
+/**
+ * 📊 Healing Report Interface
+ * Summary information about healing activity and effectiveness
+ * Like a health report showing how well your test automation is self-maintaining
+ */
+export interface HealingReport {
+    totalAttempts: number;            // Total number of healing attempts made
+    successfulHealing: number;        // How many healings were successful
+    failedHealing: number;            // How many healings failed
+    averageConfidence: number;        // Average confidence level of successful healings
+    topStrategies: string[];          // Which healing strategies work best
+    recentAttempts: HealingAttempt[]; // Latest healing attempts
+    recommendations: string[];        // Suggestions for improving test stability
+}
+
+/**
+ * 🤖 Katalon Smart Healing System Class
+ * 
+ * This class implements intelligent self-repair capabilities for your tests.
+ * Think of it as an AI mechanic for your test automation:
+ * - Automatically detects when test elements break
+ * - Tries multiple strategies to find working alternatives
+ * - Learns from successful repairs to improve future healing
+ * - Provides detailed reports on healing activity
+ * - Helps maintain test stability as your application changes
  */
 export class KatalonSmartHealing {
+    // XML processing tools for reading/writing Katalon object files
     private parser = new xml2js.Parser();
     private builder = new xml2js.Builder();
+    
+    // Keep track of all healing attempts for analysis and learning
     private healingHistory: HealingAttempt[] = [];
 
     /**

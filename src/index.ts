@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 
+// Import required libraries for the MCP (Model Context Protocol) server
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import {
@@ -12,8 +13,9 @@ import {
     ListPromptsRequestSchema,
     GetPromptRequestSchema,
 } from '@modelcontextprotocol/sdk/types.js';
-import { z } from 'zod';
+import { z } from 'zod'; // For data validation
 
+// Import our custom Katalon integration modules
 import { KatalonProjectManager } from './katalon/project-manager.js';
 import { KatalonTestExecutor } from './katalon/test-executor.js';
 import { KatalonObjectRepository } from './katalon/object-repository.js';
@@ -21,20 +23,33 @@ import { KatalonKeywordManager } from './katalon/keyword-manager.js';
 import { KatalonSmartHealing } from './katalon/smart-healing.js';
 
 /**
- * Katalon MCP Server
+ * 🤖 Katalon MCP Server - Main Application Class
  * 
- * This server provides integration between Katalon Studio and Claude AI,
- * enabling intelligent QA automation through the Model Context Protocol.
+ * This is the main server that acts as a bridge between Claude AI and Katalon Studio.
+ * Think of it as a translator that helps Claude understand and work with Katalon projects.
+ * 
+ * What it does:
+ * - Connects Claude AI to Katalon Studio through the Model Context Protocol (MCP)
+ * - Provides tools for analyzing test projects, running tests, and managing test objects
+ * - Enables AI-powered test automation and smart healing of broken test elements
  */
 class KatalonMCPServer {
+    // Core server component that handles communication with Claude AI
     private server: Server;
-    private projectManager: KatalonProjectManager;
-    private testExecutor: KatalonTestExecutor;
-    private objectRepository: KatalonObjectRepository;
-    private keywordManager: KatalonKeywordManager;
-    private smartHealing: KatalonSmartHealing;
+    
+    // Specialized modules for different Katalon operations
+    private projectManager: KatalonProjectManager;     // Analyzes and manages Katalon projects
+    private testExecutor: KatalonTestExecutor;         // Runs test suites and monitors execution
+    private objectRepository: KatalonObjectRepository; // Manages UI elements and their selectors
+    private keywordManager: KatalonKeywordManager;     // Handles custom test keywords/functions
+    private smartHealing: KatalonSmartHealing;         // Automatically fixes broken test elements
 
+    /**
+     * 🏗️ Constructor - Sets up the MCP server
+     * This is called when the server starts up and initializes all components
+     */
     constructor() {
+        // Create the main MCP server with basic information
         this.server = new Server(
             {
                 name: 'katalon-mcp-server',
@@ -42,47 +57,53 @@ class KatalonMCPServer {
             },
             {
                 capabilities: {
-                    resources: {},
-                    tools: {},
-                    prompts: {},
+                    resources: {},  // Files and data the server can access
+                    tools: {},      // Actions the server can perform
+                    prompts: {},    // Pre-defined prompts for common tasks
                 },
             }
         );
 
-        // Initialize Katalon components
-        this.projectManager = new KatalonProjectManager();
-        this.testExecutor = new KatalonTestExecutor();
-        this.objectRepository = new KatalonObjectRepository();
-        this.keywordManager = new KatalonKeywordManager();
-        this.smartHealing = new KatalonSmartHealing();
+        // Initialize all Katalon components that will handle different operations
+        this.projectManager = new KatalonProjectManager();     // For project analysis
+        this.testExecutor = new KatalonTestExecutor();         // For running tests
+        this.objectRepository = new KatalonObjectRepository(); // For managing UI elements
+        this.keywordManager = new KatalonKeywordManager();     // For custom keywords
+        this.smartHealing = new KatalonSmartHealing();         // For auto-fixing broken tests
 
-        this.setupToolHandlers();
-        this.setupResourceHandlers();
-        this.setupPromptHandlers();
+        // Set up the different types of handlers this server supports
+        this.setupToolHandlers();     // Actions Claude can perform
+        this.setupResourceHandlers(); // Files and data Claude can access
+        this.setupPromptHandlers();   // Pre-built prompts for common tasks
     }
 
+    /**
+     * 🛠️ Setup Tool Handlers
+     * These are the "actions" that Claude AI can perform through this server.
+     * Think of them as remote controls that Claude can use to operate Katalon.
+     */
     private setupToolHandlers(): void {
-        // List available tools
+        // Tell Claude what tools are available
         this.server.setRequestHandler(ListToolsRequestSchema, async () => {
             return {
                 tools: [
                     {
                         name: 'katalon_execute_test_suite',
-                        description: 'Execute a Katalon test suite or test suite collection',
+                        description: 'Execute a Katalon test suite or test suite collection with real-time monitoring',
                         inputSchema: {
                             type: 'object',
                             properties: {
                                 projectPath: {
                                     type: 'string',
-                                    description: 'Path to the Katalon project',
+                                    description: 'Full path to the Katalon project folder on your computer',
                                 },
                                 testSuitePath: {
                                     type: 'string',
-                                    description: 'Path to the test suite or test suite collection',
+                                    description: 'Path to the specific test suite file you want to run',
                                 },
                                 browser: {
                                     type: 'string',
-                                    description: 'Browser to execute tests in (Chrome, Firefox, Safari, etc.)',
+                                    description: 'Which web browser to use for testing (Chrome, Firefox, Safari, Edge, etc.)',
                                     default: 'Chrome',
                                 },
                                 executionProfile: {

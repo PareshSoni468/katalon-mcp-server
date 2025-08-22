@@ -14,12 +14,14 @@
     "declaration": true,
     "sourceMap": true,
     "types": [
-      "node"
+      "node",
+      "jest"
     ],
     "moduleResolution": "node"
   },
   "include": [
-    "src/**/*"
+    "src/**/*",
+    "tests/**/*"
   ],
   "exclude": [
     "node_modules",

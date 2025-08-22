@@ -1,112 +1,162 @@
-import * as fs from 'fs-extra';
-import * as path from 'path';
-import { spawn, ChildProcess } from 'child_process';
-import * as xml2js from 'xml2js';
+// Import necessary libraries for running tests and handling files
+import * as fs from 'fs-extra';              // File system operations
+import * as path from 'path';                // File path manipulation
+import { spawn, ChildProcess } from 'child_process'; // Run external programs (Katalon)
+import * as xml2js from 'xml2js';            // Parse XML test reports
 
+/**
+ * 🎯 ExecutionResult Interface
+ * Contains all information about a test run after it completes
+ * Like a detailed report card for your test execution
+ */
 export interface ExecutionResult {
-    success: boolean;
-    exitCode: number;
-    executionId: string;
-    startTime: Date;
-    endTime: Date;
-    duration: number;
-    testResults: TestResult[];
-    reportPath?: string;
-    logPath?: string;
-    screenshots?: string[];
-}
-
-export interface TestResult {
-    testCaseName: string;
-    status: 'PASSED' | 'FAILED' | 'SKIPPED' | 'ERROR';
-    duration: number;
-    errorMessage?: string;
-    screenshots?: string[];
-}
-
-export interface ExecutionOptions {
-    projectPath: string;
-    testSuitePath: string;
-    browser?: string;
-    executionProfile?: string;
-    browserConfig?: BrowserConfig;
-    reportFolder?: string;
-    consoleLog?: boolean;
-    retry?: number;
-}
-
-interface BrowserConfig {
-    browserType: string;
-    headless?: boolean;
-    windowSize?: string;
-    userAgent?: string;
-    arguments?: string[];
+    success: boolean;           // Did the test run complete successfully?
+    exitCode: number;          // System exit code (0 = success, others = error)
+    executionId: string;       // Unique identifier for this test run
+    startTime: Date;           // When the test started
+    endTime: Date;             // When the test finished
+    duration: number;          // How long it took (in milliseconds)
+    testResults: TestResult[]; // Results of individual test cases
+    reportPath?: string;       // Where the HTML report was saved
+    logPath?: string;          // Where the log file was saved
+    screenshots?: string[];    // Paths to any screenshots taken
 }
 
 /**
- * Katalon Test Executor
- * Handles execution of Katalon test suites and test suite collections
+ * 📝 TestResult Interface
+ * Information about a single test case within a test suite
+ */
+export interface TestResult {
+    testCaseName: string;                              // Name of the test case
+    status: 'PASSED' | 'FAILED' | 'SKIPPED' | 'ERROR'; // What happened to this test
+    duration: number;                                   // How long this test took
+    errorMessage?: string;                              // Error details if test failed
+    screenshots?: string[];                             // Screenshots for this specific test
+}
+
+/**
+ * ⚙️ ExecutionOptions Interface
+ * Configuration settings for how to run the tests
+ * Like the settings on a washing machine - tells it how to run
+ */
+export interface ExecutionOptions {
+    projectPath: string;        // Where your Katalon project is located
+    testSuitePath: string;      // Which test suite to run
+    browser?: string;           // Which browser to use (Chrome, Firefox, etc.)
+    executionProfile?: string;  // Which environment profile (dev, staging, prod)
+    browserConfig?: BrowserConfig; // Detailed browser settings
+    reportFolder?: string;      // Where to save test reports
+    consoleLog?: boolean;       // Should we show detailed logs in console?
+    retry?: number;            // How many times to retry failed tests
+}
+
+/**
+ * 🌐 BrowserConfig Interface
+ * Detailed settings for how the browser should behave during testing
+ */
+interface BrowserConfig {
+    browserType: string;    // Type of browser (chrome, firefox, edge)
+    headless?: boolean;     // Run without showing browser window (faster)
+    windowSize?: string;    // Browser window size (e.g., "1920x1080")
+    userAgent?: string;     // Pretend to be a different browser/device
+    arguments?: string[];   // Special browser startup options
+}
+
+/**
+ * 🚀 Katalon Test Executor Class
+ * 
+ * This class is responsible for actually running your Katalon tests.
+ * Think of it as a remote control for Katalon Studio that can:
+ * - Start test executions
+ * - Monitor progress in real-time
+ * - Collect and parse results
+ * - Handle errors and retries
  */
 export class KatalonTestExecutor {
+    // XML parser for reading Katalon's test result files
     private parser = new xml2js.Parser();
+    
+    // Keep track of running test processes so we can manage them
     private runningProcesses: Map<string, ChildProcess> = new Map();
 
     /**
-     * Execute a Katalon test suite or test suite collection
+     * 🎬 Execute Test Suite or Test Suite Collection
+     * This is the main method that runs your Katalon tests
+     * 
+     * @param options - Configuration for how to run the tests
+     * @returns Promise<ExecutionResult> - Complete results of the test execution
+     * 
+     * Think of this like pressing "play" on a playlist, but for tests.
+     * It handles everything from starting the tests to collecting results.
      */
     async executeTestSuite(args: any): Promise<{ content: any[] }> {
+        // Convert the arguments passed to this method into proper execution options
         const options: ExecutionOptions = {
-            projectPath: args.projectPath,
-            testSuitePath: args.testSuitePath,
-            browser: args.browser || 'Chrome',
-            executionProfile: args.executionProfile || 'default',
-            browserConfig: args.browserConfig,
-            reportFolder: args.reportFolder,
-            consoleLog: args.consoleLog !== false,
-            retry: args.retry || 0,
+            projectPath: args.projectPath,           // Where the Katalon project lives
+            testSuitePath: args.testSuitePath,       // Which test suite to run
+            browser: args.browser || 'Chrome',       // Default to Chrome if not specified
+            executionProfile: args.executionProfile || 'default', // Use default profile
+            browserConfig: args.browserConfig,       // Browser-specific settings
+            reportFolder: args.reportFolder,         // Where to save reports
+            consoleLog: args.consoleLog !== false,   // Show logs unless explicitly disabled
+            retry: args.retry || 0,                  // Don't retry by default
         };
 
         try {
+            // Actually run the test with these options
             const result = await this.executeTest(options);
             return {
                 content: [
                     {
                         type: 'text',
-                        text: this.formatExecutionResult(result),
+                        text: this.formatExecutionResult(result), // Format results for display
                     },
                 ],
             };
         } catch (error) {
+            // If something goes wrong, provide a helpful error message
             throw new Error(`Test execution failed: ${error instanceof Error ? error.message : String(error)}`);
         }
     }
 
     /**
-     * Execute test with detailed configuration
+     * 🔧 Execute Test with Detailed Configuration
+     * This is the core method that actually runs Katalon and manages the process
+     * 
+     * @param options - All the settings for how to run the test
+     * @returns Promise<ExecutionResult> - Complete results with timing and outcomes
+     * 
+     * This method coordinates all the steps needed to run a test:
+     * 1. Validates everything is set up correctly
+     * 2. Finds the Katalon program on your computer
+     * 3. Builds the command to run
+     * 4. Executes the test
+     * 5. Collects and processes the results
      */
     private async executeTest(options: ExecutionOptions): Promise<ExecutionResult> {
+        // Generate a unique ID for this test run (helps track multiple tests)
         const executionId = this.generateExecutionId();
-        const startTime = new Date();
+        const startTime = new Date(); // Record when we started
 
-        // Validate inputs
+        // Make sure everything is set up correctly before starting
         await this.validateExecution(options);
 
-        // Find Katalon Runtime Engine
+        // Find where Katalon is installed on this computer
         const katalonCommand = await this.findKatalonCommand();
 
-        // Build command arguments
+        // Build the command-line arguments to pass to Katalon
         const args = await this.buildExecutionArgs(options, executionId);
 
-        // Execute the test
+        // Actually run Katalon with our arguments
         const { exitCode, output } = await this.runKatalonCommand(katalonCommand, args, executionId);
 
-        const endTime = new Date();
-        const duration = endTime.getTime() - startTime.getTime();
+        const endTime = new Date(); // Record when we finished
+        const duration = endTime.getTime() - startTime.getTime(); // Calculate how long it took
 
-        // Parse results
+        // Read and process the test results that Katalon generated
         const testResults = await this.parseExecutionResults(options.projectPath, executionId);
 
-        // Get report and log paths
+        // Find where Katalon saved the HTML report and log files
         const reportPath = await this.getReportPath(options.projectPath, executionId);
         const logPath = await this.getLogPath(options.projectPath, executionId);
 

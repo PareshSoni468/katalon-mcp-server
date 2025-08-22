@@ -1,58 +1,100 @@
-import * as fs from 'fs-extra';
-import * as path from 'path';
-import { glob } from 'glob';
+// Import necessary libraries for file operations and code analysis
+import * as fs from 'fs-extra';      // Enhanced file system operations
+import * as path from 'path';        // File path manipulation
+import { glob } from 'glob';          // Find files using patterns
 
+/**
+ * 📖 Keyword Information Interface
+ * Detailed information about a built-in Katalon keyword
+ * These are the ready-made functions that come with Katalon Studio
+ */
 export interface KeywordInfo {
-    name: string;
-    description: string;
-    category: string;
-    parameters: KeywordParameter[];
-    returnType: string;
-    usage: string;
-    examples: string[];
-}
-
-export interface KeywordParameter {
-    name: string;
-    type: string;
-    description: string;
-    required: boolean;
-    defaultValue?: string;
-}
-
-export interface CustomKeyword {
-    name: string;
-    description: string;
-    fileName: string;
-    parameters: KeywordParameter[];
-    code: string;
-    usageCount: number;
-}
-
-export interface KeywordLibrary {
-    builtInKeywords: KeywordInfo[];
-    customKeywords: CustomKeyword[];
-    categories: string[];
-    totalKeywords: number;
-}
-
-export interface KeywordManagementOptions {
-    projectPath: string;
-    action: 'list_builtin' | 'list_custom' | 'create_custom' | 'update_custom';
-    keywordName?: string;
-    keywordCode?: string;
-    description?: string;
-    parameters?: KeywordParameter[];
+    name: string;                     // Name of the keyword (e.g., "click", "type", "verifyText")
+    description: string;              // What this keyword does in plain English
+    category: string;                 // Which group it belongs to (WebUI, Mobile, API, etc.)
+    parameters: KeywordParameter[];   // What inputs this keyword expects
+    returnType: string;               // What type of value it returns (if any)
+    usage: string;                    // How to use this keyword in your tests
+    examples: string[];               // Example code showing usage
 }
 
 /**
- * Katalon Keyword Manager
- * Manages built-in and custom keywords in Katalon projects
+ * 📝 Keyword Parameter Interface
+ * Describes an input that a keyword expects
+ * Like describing the ingredients needed for a recipe
+ */
+export interface KeywordParameter {
+    name: string;                     // Parameter name (e.g., "locator", "text", "timeout")
+    type: string;                     // Data type (String, Integer, Boolean, WebElement, etc.)
+    description: string;              // What this parameter is used for
+    required: boolean;                // Must this parameter always be provided?
+    defaultValue?: string;            // Default value if not provided
+}
+
+/**
+ * 🔧 Custom Keyword Interface
+ * Represents a reusable piece of test automation code that you've created
+ * Your own custom tools that you can use across multiple tests
+ */
+export interface CustomKeyword {
+    name: string;                     // The name of your custom function
+    description: string;              // What this keyword does in plain English
+    fileName: string;                 // Which file contains this keyword
+    parameters: KeywordParameter[];   // What inputs this keyword expects
+    code: string;                     // The actual code that runs
+    usageCount: number;               // How many tests use this keyword
+}
+
+/**
+ * 📚 Keyword Library Interface
+ * Complete collection of all available keywords in your project
+ * Like a catalog of all the tools available for test automation
+ */
+export interface KeywordLibrary {
+    builtInKeywords: KeywordInfo[];   // Keywords that come with Katalon Studio
+    customKeywords: CustomKeyword[];  // Keywords that you or your team created
+    categories: string[];             // Different groups of keywords (WebUI, Mobile, etc.)
+    totalKeywords: number;            // Total count of all available keywords
+}
+
+/**
+ * ⚙️ Keyword Management Options Interface
+ * Configuration for performing operations on keywords
+ * Specifies what action to take and how to perform it
+ */
+export interface KeywordManagementOptions {
+    projectPath: string;              // Where the Katalon project is located
+    action: 'list_builtin' | 'list_custom' | 'create_custom' | 'update_custom'; // What operation to perform
+    keywordName?: string;             // Name of the keyword to work with
+    keywordCode?: string;             // Code for the custom keyword (for create/update)
+    description?: string;             // Description of what the keyword does
+    parameters?: KeywordParameter[];  // Parameters the keyword accepts
+}
+
+/**
+ * 🛠️ Katalon Keyword Manager Class
+ * 
+ * This class manages both built-in and custom keywords in your Katalon project.
+ * Think of it as a reference librarian for test automation:
+ * - Provides information about built-in Katalon keywords
+ * - Manages your custom keywords
+ * - Helps you discover what tools are available
+ * - Assists in creating and organizing custom functions
  */
 export class KatalonKeywordManager {
 
     /**
-     * Manage keyword operations
+     * 🎯 Manage Keyword Operations
+     * Main entry point for all keyword-related operations
+     * 
+     * @param args - Configuration specifying what operation to perform
+     * @returns Promise with results of the keyword operation
+     * 
+     * This method coordinates different keyword operations like:
+     * - Listing built-in keywords
+     * - Managing custom keywords  
+     * - Creating new keywords
+     * - Updating existing keywords
      */
     async manageKeywords(args: any): Promise<{ content: any[] }> {
         const options: KeywordManagementOptions = {

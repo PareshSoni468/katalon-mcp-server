@@ -1,53 +1,81 @@
-import * as fs from 'fs-extra';
-import * as path from 'path';
-import * as xml2js from 'xml2js';
-import { glob } from 'glob';
+// Import necessary libraries for file operations and XML parsing
+import * as fs from 'fs-extra';    // Enhanced file system operations
+import * as path from 'path';      // File path manipulation
+import * as xml2js from 'xml2js';  // Convert XML files to JavaScript objects
+import { glob } from 'glob';       // Find files using patterns (like *.tc, *.ts)
 
+/**
+ * 📁 KatalonProject Interface
+ * Defines what information we store about a Katalon project
+ * Think of this as a "business card" for each project
+ */
 export interface KatalonProject {
-    name: string;
-    path: string;
-    version: string;
-    testCases: string[];
-    testSuites: string[];
-    objectRepositories: string[];
-    profiles: string[];
+    name: string;                   // Project name (e.g., "E-commerce Tests")
+    path: string;                   // Where the project is stored on disk
+    version: string;                // Katalon version used
+    testCases: string[];           // List of all test case files
+    testSuites: string[];          // List of all test suite files
+    objectRepositories: string[];  // List of UI element definition files
+    profiles: string[];            // List of execution profiles (dev, staging, prod)
 }
 
+/**
+ * 📋 TestCaseTemplate Interface
+ * Defines pre-built templates for creating common types of tests
+ * Like having a recipe book for different kinds of test cases
+ */
 export interface TestCaseTemplate {
-    name: string;
-    description: string;
-    category: string;
-    template: string;
-    keywords: string[];
+    name: string;        // Template name (e.g., "Login Test")
+    description: string; // What this template does
+    category: string;    // Type of test (UI, API, Mobile, etc.)
+    template: string;    // The actual code template
+    keywords: string[];  // Katalon keywords used in this template
 }
 
+/**
+ * 📊 AnalysisResult Interface
+ * Contains all the health and status information about a project
+ * Like a medical checkup report for your test project
+ */
 export interface AnalysisResult {
-    overview: ProjectOverview;
-    testCoverage?: TestCoverage;
-    objectHealth?: ObjectHealth;
-    keywordUsage?: KeywordUsage;
+    overview: ProjectOverview;        // Basic project statistics
+    testCoverage?: TestCoverage;      // How well tests cover the application
+    objectHealth?: ObjectHealth;      // Status of UI elements
+    keywordUsage?: KeywordUsage;      // Which keywords are being used
 }
 
+/**
+ * 📈 ProjectOverview Interface
+ * Basic statistics about the project - the "at a glance" view
+ */
 interface ProjectOverview {
-    totalTestCases: number;
-    totalTestSuites: number;
-    totalObjects: number;
-    totalKeywords: number;
-    lastModified: Date;
+    totalTestCases: number;    // How many test cases exist
+    totalTestSuites: number;   // How many test suites exist
+    totalObjects: number;      // How many UI elements are defined
+    totalKeywords: number;     // How many custom keywords exist
+    lastModified: Date;        // When was the project last changed
 }
 
+/**
+ * 🎯 TestCoverage Interface
+ * Information about how well your tests are performing
+ */
 interface TestCoverage {
-    executedTests: number;
-    passedTests: number;
-    failedTests: number;
-    coverage: number;
+    executedTests: number;  // How many tests have been run
+    passedTests: number;    // How many tests succeeded
+    failedTests: number;    // How many tests failed
+    coverage: number;       // Percentage of application covered by tests
 }
 
+/**
+ * 🏥 ObjectHealth Interface
+ * Status of UI elements (buttons, text fields, etc.) in your tests
+ */
 interface ObjectHealth {
-    totalObjects: number;
-    healthyObjects: number;
-    brokenObjects: number;
-    healedObjects: number;
+    totalObjects: number;    // Total number of UI elements defined
+    healthyObjects: number;  // Elements that work correctly
+    brokenObjects: number;   // Elements that need fixing
+    healedObjects: number;   // Elements that were auto-fixed
 }
 
 interface KeywordUsage {
