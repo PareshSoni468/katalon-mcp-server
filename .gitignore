@@ -8,6 +8,10 @@ yarn-error.log*
 dist/
 build/
 
+# Logs
+logs/
+*.log
+
 # Environment variables
 .env
 .env.local
@@ -30,10 +34,6 @@ build/
 .Trashes
 ehthumbs.db
 Thumbs.db
-
-# Logs
-logs
-*.log
 
 # Runtime data
 pids

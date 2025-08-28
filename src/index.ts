@@ -15,6 +15,27 @@ import {
 } from '@modelcontextprotocol/sdk/types.js';
 import { z } from 'zod'; // For data validation
 
+// Import type definitions and validation functions
+import {
+    ExecuteTestSuiteArgs,
+    AnalyzeProjectArgs,
+    CreateTestCaseArgs,
+    ManageObjectRepositoryArgs,
+    ManageKeywordsArgs,
+    TestDesignPromptArgs,
+    ObjectIdentificationPromptArgs,
+    validateExecuteTestSuiteArgs,
+    validateAnalyzeProjectArgs,
+    validateCreateTestCaseArgs,
+    validateManageObjectRepositoryArgs,
+    validateManageKeywordsArgs,
+    validateTestDesignPromptArgs,
+    validateObjectIdentificationPromptArgs,
+} from './types/mcp-args.js';
+
+// Import logging utilities
+import { createModuleLogger } from './utils/logger.js';
+
 // Import our custom Katalon integration modules
 import { KatalonProjectManager } from './katalon/project-manager.js';
 import { KatalonTestExecutor } from './katalon/test-executor.js';
@@ -24,10 +45,10 @@ import { KatalonSmartHealing } from './katalon/smart-healing.js';
 
 /**
  * 🤖 Katalon MCP Server - Main Application Class
- * 
+ *
  * This is the main server that acts as a bridge between Claude AI and Katalon Studio.
  * Think of it as a translator that helps Claude understand and work with Katalon projects.
- * 
+ *
  * What it does:
  * - Connects Claude AI to Katalon Studio through the Model Context Protocol (MCP)
  * - Provides tools for analyzing test projects, running tests, and managing test objects
@@ -36,13 +57,16 @@ import { KatalonSmartHealing } from './katalon/smart-healing.js';
 class KatalonMCPServer {
     // Core server component that handles communication with Claude AI
     private server: Server;
-    
+
+    // Module-specific logger for this server
+    private logger = createModuleLogger('KatalonMCPServer');
+
     // Specialized modules for different Katalon operations
-    private projectManager: KatalonProjectManager;     // Analyzes and manages Katalon projects
-    private testExecutor: KatalonTestExecutor;         // Runs test suites and monitors execution
+    private projectManager: KatalonProjectManager; // Analyzes and manages Katalon projects
+    private testExecutor: KatalonTestExecutor; // Runs test suites and monitors execution
     private objectRepository: KatalonObjectRepository; // Manages UI elements and their selectors
-    private keywordManager: KatalonKeywordManager;     // Handles custom test keywords/functions
-    private smartHealing: KatalonSmartHealing;         // Automatically fixes broken test elements
+    private keywordManager: KatalonKeywordManager; // Handles custom test keywords/functions
+    private smartHealing: KatalonSmartHealing; // Automatically fixes broken test elements
 
     /**
      * 🏗️ Constructor - Sets up the MCP server
@@ -57,24 +81,24 @@ class KatalonMCPServer {
             },
             {
                 capabilities: {
-                    resources: {},  // Files and data the server can access
-                    tools: {},      // Actions the server can perform
-                    prompts: {},    // Pre-defined prompts for common tasks
+                    resources: {}, // Files and data the server can access
+                    tools: {}, // Actions the server can perform
+                    prompts: {}, // Pre-defined prompts for common tasks
                 },
             }
         );
 
         // Initialize all Katalon components that will handle different operations
-        this.projectManager = new KatalonProjectManager();     // For project analysis
-        this.testExecutor = new KatalonTestExecutor();         // For running tests
+        this.projectManager = new KatalonProjectManager(); // For project analysis
+        this.testExecutor = new KatalonTestExecutor(); // For running tests
         this.objectRepository = new KatalonObjectRepository(); // For managing UI elements
-        this.keywordManager = new KatalonKeywordManager();     // For custom keywords
-        this.smartHealing = new KatalonSmartHealing();         // For auto-fixing broken tests
+        this.keywordManager = new KatalonKeywordManager(); // For custom keywords
+        this.smartHealing = new KatalonSmartHealing(); // For auto-fixing broken tests
 
         // Set up the different types of handlers this server supports
-        this.setupToolHandlers();     // Actions Claude can perform
+        this.setupToolHandlers(); // Actions Claude can perform
         this.setupResourceHandlers(); // Files and data Claude can access
-        this.setupPromptHandlers();   // Pre-built prompts for common tasks
+        this.setupPromptHandlers(); // Pre-built prompts for common tasks
     }
 
     /**
@@ -89,7 +113,8 @@ class KatalonMCPServer {
                 tools: [
                     {
                         name: 'katalon_execute_test_suite',
-                        description: 'Execute a Katalon test suite or test suite collection with real-time monitoring',
+                        description:
+                            'Execute a Katalon test suite or test suite collection with real-time monitoring',
                         inputSchema: {
                             type: 'object',
                             properties: {
@@ -103,7 +128,8 @@ class KatalonMCPServer {
                                 },
                                 browser: {
                                     type: 'string',
-                                    description: 'Which web browser to use for testing (Chrome, Firefox, Safari, Edge, etc.)',
+                                    description:
+                                        'Which web browser to use for testing (Chrome, Firefox, Safari, Edge, etc.)',
                                     default: 'Chrome',
                                 },
                                 executionProfile: {
@@ -231,13 +257,24 @@ class KatalonMCPServer {
         });
 
         // Handle tool execution
-        this.server.setRequestHandler(CallToolRequestSchema, async (request) => {
+        this.server.setRequestHandler(CallToolRequestSchema, async request => {
             const { name, arguments: args } = request.params;
 
             try {
                 switch (name) {
                     case 'katalon_execute_test_suite':
-                        return await this.testExecutor.executeTestSuite(args);
+                        try {
+                            const validatedArgs = validateExecuteTestSuiteArgs(request.params.arguments);
+                            this.logger.info('Executing test suite', {
+                                projectPath: validatedArgs.projectPath,
+                                testSuitePath: validatedArgs.testSuitePath,
+                            });
+                            return await this.testExecutor.executeTestSuite(validatedArgs);
+                        } catch (error) {
+                            const errorMessage = error instanceof Error ? error.message : String(error);
+                            this.logger.error('Failed to execute test suite', { error: errorMessage });
+                            throw error;
+                        }
 
                     case 'katalon_create_test_case':
                         return await this.projectManager.createTestCase(args);
@@ -249,7 +286,15 @@ class KatalonMCPServer {
                         return await this.keywordManager.manageKeywords(args);
 
                     case 'katalon_analyze_project':
-                        return await this.projectManager.analyzeProject(args);
+                        try {
+                            const validatedArgs = validateAnalyzeProjectArgs(request.params.arguments);
+                            this.logger.info('Analyzing project', { projectPath: validatedArgs.projectPath });
+                            return await this.projectManager.analyzeProject(validatedArgs);
+                        } catch (error) {
+                            const errorMessage = error instanceof Error ? error.message : String(error);
+                            this.logger.error('Failed to analyze project', { error: errorMessage });
+                            throw error;
+                        }
 
                     default:
                         throw new McpError(ErrorCode.MethodNotFound, `Unknown tool: ${name}`);
@@ -291,7 +336,7 @@ class KatalonMCPServer {
         });
 
         // Handle resource reading
-        this.server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
+        this.server.setRequestHandler(ReadResourceRequestSchema, async request => {
             const { uri } = request.params;
 
             switch (uri) {
@@ -371,7 +416,7 @@ class KatalonMCPServer {
         });
 
         // Handle prompt requests
-        this.server.setRequestHandler(GetPromptRequestSchema, async (request) => {
+        this.server.setRequestHandler(GetPromptRequestSchema, async request => {
             const { name, arguments: args } = request.params;
 
             switch (name) {
@@ -383,7 +428,9 @@ class KatalonMCPServer {
                                 role: 'user',
                                 content: {
                                     type: 'text',
-                                    text: await this.generateTestDesignPrompt(args),
+                                    text: await this.generateTestDesignPrompt(
+                                        validateTestDesignPromptArgs(request.params.arguments || {})
+                                    ),
                                 },
                             },
                         ],
@@ -397,7 +444,9 @@ class KatalonMCPServer {
                                 role: 'user',
                                 content: {
                                     type: 'text',
-                                    text: await this.generateObjectIdentificationPrompt(args),
+                                    text: await this.generateObjectIdentificationPrompt(
+                                        validateObjectIdentificationPromptArgs(request.params.arguments || {})
+                                    ),
                                 },
                             },
                         ],
@@ -409,16 +458,27 @@ class KatalonMCPServer {
         });
     }
 
-    private async generateTestDesignPrompt(args: any): Promise<string> {
-        const applicationType = args?.application_type || 'web';
-        const testScope = args?.test_scope || 'functional';
+    /**
+     * 📝 Generate Test Design Guidance Prompt
+     * Creates detailed guidance for designing effective test cases
+     *
+     * @param args - Configuration for the type of guidance needed
+     * @returns Comprehensive test design guidance text
+     */
+    private async generateTestDesignPrompt(args: TestDesignPromptArgs): Promise<string> {
+        const applicationType = args.applicationType;
+        const testType = args.testType;
+        const complexity = args.complexity;
+        const includeDataDriven = args.includeDataDriven;
 
         return `# Katalon Test Design Guide
 
 ## Application Type: ${applicationType}
-## Test Scope: ${testScope}
+## Test Type: ${testType}
+## Complexity Level: ${complexity}
+## Data-Driven Testing: ${includeDataDriven ? 'Enabled' : 'Disabled'}
 
-Based on your application type and test scope, here are the recommended practices for designing effective Katalon test cases:
+Based on your application type and test requirements, here are the recommended practices for designing effective Katalon test cases:
 
 ### Test Structure
 - Use Page Object Model pattern for better maintainability
@@ -439,17 +499,25 @@ Based on your application type and test scope, here are the recommended practice
 Would you like specific recommendations for your ${applicationType} application testing strategy?`;
     }
 
-    private async generateObjectIdentificationPrompt(args: any): Promise<string> {
-        const elementType = args?.element_type || 'button';
+    private async generateObjectIdentificationPrompt(
+        args: ObjectIdentificationPromptArgs
+    ): Promise<string> {
+        const elementType = args.elementType;
+        const locatorStrategy = args.locatorStrategy;
+        const includeSmartHealing = args.includeSmartHealing;
+        const applicationFramework = args.applicationFramework;
 
         return `# Katalon Object Identification Best Practices
 
 ## Element Type: ${elementType}
+## Locator Strategy: ${locatorStrategy}
+## Smart Healing: ${includeSmartHealing ? 'Enabled' : 'Disabled'}
+${applicationFramework ? `## Framework: ${applicationFramework}` : ''}
 
 ### Recommended Locator Strategies for ${elementType}:
 
 1. **Primary Strategy**: Use stable attributes like ID or data-testid
-2. **Secondary Strategy**: CSS selectors with meaningful class names
+2. **Secondary Strategy**: CSS selectors with meaningful class names  
 3. **Fallback Strategy**: XPath with relative positioning
 
 ### Smart Healing Configuration:
@@ -475,7 +543,7 @@ Would you like help implementing object identification for specific ${elementTyp
 
 // Start the server
 const server = new KatalonMCPServer();
-server.run().catch((error) => {
+server.run().catch(error => {
     console.error('Server error:', error);
     process.exit(1);
 });

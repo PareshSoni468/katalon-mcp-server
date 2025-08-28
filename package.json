@@ -12,7 +12,10 @@
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
     "test:verbose": "jest --verbose",
-    "lint": "echo \"Linting not configured yet\"",
+    "lint": "eslint src/**/*.ts --fix",
+    "lint:check": "eslint src/**/*.ts",
+    "format": "prettier --write src/**/*.ts",
+    "format:check": "prettier --check src/**/*.ts",
     "clean": "rimraf dist coverage"
   },
   "keywords": [
@@ -29,8 +32,16 @@
     "node": ">=18.0.0"
   },
   "devDependencies": {
+    "@eslint/js": "^9.34.0",
     "@types/jest": "^30.0.0",
+    "@typescript-eslint/eslint-plugin": "^8.41.0",
+    "@typescript-eslint/parser": "^8.41.0",
+    "eslint": "^9.34.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-prettier": "^5.5.4",
     "jest": "^30.0.5",
+    "prettier": "^3.6.2",
+    "rimraf": "^6.0.1",
     "ts-jest": "^29.4.1",
     "typescript": "^5.9.2"
   },
@@ -39,11 +50,9 @@
     "@types/fs-extra": "^11.0.4",
     "@types/node": "^24.3.0",
     "@types/xml2js": "^0.4.14",
-    "child_process": "^1.0.2",
     "fs-extra": "^11.3.1",
     "glob": "^11.0.3",
-    "path": "^0.12.7",
-    "shelljs": "^0.10.0",
+    "winston": "^3.17.0",
     "xml2js": "^0.6.2",
     "zod": "^3.25.76"
   }
